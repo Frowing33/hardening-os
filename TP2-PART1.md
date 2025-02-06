@@ -132,14 +132,14 @@ jeanc@srv-ubuntu:~$ ldd /bin/ls | grep libc
 🌞 **Donner le nom ET l'identifiant unique d'un syscall qui permet à un processus de...**
 
 - lire un fichier stocké sur disque
-**Nom du syscall** : `read`
-**Identifiant unique** : `0`
+- **Nom du syscall** : `read`
+- **Identifiant unique** : `0`
 - écrire dans un fichier stocké sur disque
-**Nom du syscall** : `write`
-**Identifiant unique** : `1`
+- **Nom du syscall** : `write`
+- **Identifiant unique** : `1`
 - lancer un nouveau processus
-**Nom du syscall** : `fork` ou `execve`
-**Identifiant unique (x86_64)** :
+- **Nom du syscall** : `fork` ou `execve`
+- **Identifiant unique** :
 `fork` : `57`
 `execve` : `59`
 **Description** :
