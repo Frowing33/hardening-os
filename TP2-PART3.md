@@ -126,3 +126,5 @@ jeanc@srv-ubuntu:/home$ sudo strace -c /usr/sbin/nginx -g 'daemon off;'
 - modifier le fichier `nginx.service` pour inclure un filtrage des *syscalls*
 - principe du moindre privilège : vous n'autorisez que le strict nécessaire
 - vous me remettez le fichier `nginx.service` modifié dans le compte-rendu naturellement !
+- 
+(./sources/nginx.service)
