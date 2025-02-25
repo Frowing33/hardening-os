@@ -1,17 +1,12 @@
 # Part I : A bit of exploration
 
 Commençons par un peu d'exploration manuelle des pseudo-filesystems que sont `/proc` et `/sys`.
-
-⚠️⚠️⚠️ **Vous n'utiliserez que les commandes `cat`, `ls` et `cd` (ou commandes similaires comme du `grep` bien sûr) pour réaliser cette partie.**
-
-![cat /proc](./img/cat_proc.png)
-
 ## Sommaire
 
-- [Part I : A bit of exploration](#part-i--a-bit-of-exploration)
-  - [Sommaire](#sommaire)
-  - [1. /proc](#1-proc)
-  - [2. /sys](#2-sys)
+- [Part I : A bit of exploration]
+  - [Sommaire]
+  - [1. /proc]
+  - [2. /sys]
 
 ## 1. /proc
 
