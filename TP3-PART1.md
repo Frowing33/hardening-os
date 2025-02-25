@@ -65,5 +65,22 @@ BOOT_IMAGE=(hd0,msdos1)/vmlinuz-5.14.0-427.13.1.el9_4.x86_64 root=/dev/mapper/rl
 🌞 **Afficher...** :
 
 - la liste des périphériques de types bloc reconnus par l'OS (genre les disques durs par exemple koa)
+```console
+[jeanc@efrei-xmg4agau1 ~]$ ls /sys/block/
+dm-0  dm-1  sda  sr0
+```
 - la liste des modules kernel qui sont actuellements en cours d'utilisation
+```console
+[jeanc@efrei-xmg4agau1 ~]$ ls /sys/module/
+8250                 intel_rapl_common  rfkill
+ac97_bus             intel_rapl_msr     rng_core
+acpi                 intel_vsec         rtc_cmos
+acpiphp              ip_set             scsi_dh_alua
+...
+...
+```
 - la liste des cartes réseau
+```console
+[jeanc@efrei-xmg4agau1 ~]$ ls /sys/class/net/
+enp0s3  enp0s8  lo
+```
