@@ -30,7 +30,28 @@ Genre on fait croire à un programme que son dossier `/` c'est genre `/toto/supe
 
 - possible que ça fonctionne pas immédiatement car y'a pas de shells dans votre `chroot` :d
 - déplacez le nécessaire dans `/srv/get_chrooted/` pour pouvoir lancé un shell `chroot`é à l'intérieur
+Nous devons voir quelles bibliothèques sont nécessaires pour que le shell fonctionne.
 
+```console
+[jeanc@efrei-xmg4agau1 ~]$ ldd /bin/bash
+        linux-vdso.so.1 (0x00007ffe0a7f5000)
+        libtinfo.so.6 => /lib64/libtinfo.so.6 (0x00007f0e93ca9000)
+        libc.so.6 => /lib64/libc.so.6 (0x00007f0e93a00000)
+        /lib64/ld-linux-x86-64.so.2 (0x00007f0e93e3a000)
+```
+On va copier les dépendances :
+```console
+[jeanc@efrei-xmg4agau1 ~]$ sudo cp -v /lib64/libtinfo.so.6 /srv/get_chrooted/lib64/
+sudo cp -v /lib64/libc.so.6 /srv/get_chrooted/lib64/
+sudo cp -v /lib64/ld-linux-x86-64.so.2 /srv/get_chrooted/lib64/
+```
+Une fois les lib minimum copié dans le répertoire.
+On peut maintenant essayer de chrooter avec le shell
+```console
+[jeanc@efrei-xmg4agau1 ~]$ sudo chroot /srv/get_chrooted /bin/bash
+bash-5.1#
+```
+Ca marche nickel :D
 ## 2. SSH old friend
 
 Keskivien foutr là tu vas me dire. OpenSSH, ce bro, comme d'hab, va nous faire le café.
