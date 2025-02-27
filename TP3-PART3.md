@@ -148,13 +148,64 @@ mkdir /sys/fs/cgroup/meow/task2
 🌞 **Appliquer des restrictions CPU** :
 
 - utilisez la mécanique de `cpu.weight` pour définir des priorités différentes à `task1` et `task2`
+```console
+[jeanc@efrei-xmg4agau1 task1]$ echo 100 | sudo tee /sys/fs/cgroup/meow/task1/cpu.weight
+[jeanc@efrei-xmg4agau1 task1]$ echo 1000 | sudo tee /sys/fs/cgroup/meow/task2/cpu.weight
+[jeanc@efrei-xmg4agau1 task1]$ cat /sys/fs/cgroup/meow/task1/cpu.weight
+100
+[jeanc@efrei-xmg4agau1 task1]$ cat /sys/fs/cgroup/meow/task2/cpu.weight
+1000
+```
 - utilisez `stress-ng` ou un bon vieux `cat /dev/random` pour lancer un processus CPU-intensive, et pour prouver que la restriction est en place
 - pour tester, vous devez :
   - lancer deux shells en même temps
   - ajouter le premier au *CGroup* `task1`
   - ajouter le deuxième au *CGroup* `task2`
+Shell 1:
+ ```console
+[jeanc@efrei-xmg4agau1 task1]$ echo $$ | sudo tee /sys/fs/cgroup/meow/task1/cgroup.procs
+[jeanc@efrei-xmg4agau1 task1]$ sudo stress-ng --timeout 55555 --vm 4 -c 4 -l 100 --cpu-method=div16
+```
+Shell 2:
+```console
+[jeanc@efrei-xmg4agau1 task2]$ echo $$ | sudo tee /sys/fs/cgroup/meow/task2/cgroup.procs
+[jeanc@efrei-xmg4agau1 task2]$ sudo stress-ng --timeout 55555 --vm 4 -c 4 -l 100 --cpu-method=div16
+```
   - dans les deux shells, lancer un processus CPU-intensive
   - constatez avec un `htop` par exemple que les deux processus ne se répartissent pas équitablement la puissance du CPU
+ Resultats : 
+```console
+[jeanc@efrei-xmg4agau1 ~]$ watch -n0.1 "ps -eo cmd,pid,%cpu | grep stress"
+sudo stress-ng --timeout 55   64555  0.0
+stress-ng --timeout 55555 -   64557  0.0
+stress-ng --timeout 55555 -   64558  0.0
+stress-ng --timeout 55555 -   64559  0.0
+stress-ng --timeout 55555 -   64560  0.0
+stress-ng --timeout 55555 -   64561  0.0
+stress-ng --timeout 55555 -   64562 30.6
+stress-ng --timeout 55555 -   64563 31.1
+stress-ng --timeout 55555 -   64564 31.0
+stress-ng --timeout 55555 -   64565 31.0
+stress-ng --timeout 55555 -   64566 30.6
+stress-ng --timeout 55555 -   64567 30.9
+stress-ng --timeout 55555 -   64568 31.3
+stress-ng --timeout 55555 -   64569 31.3
+sudo stress-ng --vm 4 --tim   64570  0.0
+stress-ng --vm 4 --timeout    64572  0.0
+stress-ng --vm 4 --timeout    64573  0.0
+stress-ng --vm 4 --timeout    64574  0.0
+stress-ng --vm 4 --timeout    64575  0.0
+stress-ng --vm 4 --timeout    64576  0.0
+stress-ng --vm 4 --timeout    64577 24.0
+stress-ng --vm 4 --timeout    64578 23.9
+stress-ng --vm 4 --timeout    64579 24.0
+stress-ng --vm 4 --timeout    64580 23.5
+stress-ng --vm 4 --timeout    64581 23.9
+stress-ng --vm 4 --timeout    64582 23.9
+stress-ng --vm 4 --timeout    64583 24.4
+stress-ng --vm 4 --timeout    64584 24.3
+grep stress                   65896  0.0
+```
 
 ## 3. systemd
 
