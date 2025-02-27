@@ -43,9 +43,29 @@ cgroup.subtree_control  dev-hugepages.mount    memory.stat       sys-kernel-trac
 - la quantité de mémoire max que vous êtes autorisés à utiliser dans votre session utilisateur
   - par défaut, sous Rocky, le *controller* memory n'est pas activé : normal si vous ne voyez aucun fichier `memory.max`
   - si c'est le cas, ça veut dire qu'aucune restriction RAM est en place (vous devez justement constater ça)
+  On constate bien qu'aucun fichier memory.max est apparent, donc pas de réstriction.
 - les noms de tous les *CGroups* créés
   - ce sont tous les sous-dossiers de `/sys/fs/cgroup`
   - il devrait y avoir au moins les slices et scopes de systemd, on en parle plus bas
+ ```console
+[jeanc@efrei-xmg4agau1 ~]$ ls -R /sys/fs/cgroup/
+/sys/fs/cgroup/:
+cgroup.controllers      cgroup.threads         dev-mqueue.mount  misc.capacity                  system.slice
+cgroup.max.depth        cpuset.cpus.effective  init.scope        misc.current                   user.slice
+cgroup.max.descendants  cpuset.cpus.isolated   io.stat           sys-fs-fuse-connections.mount
+cgroup.procs            cpuset.mems.effective  memory.numa_stat  sys-kernel-config.mount
+cgroup.stat             cpu.stat               memory.reclaim    sys-kernel-debug.mount
+cgroup.subtree_control  dev-hugepages.mount    memory.stat       sys-kernel-tracing.mount
+
+/sys/fs/cgroup/dev-hugepages.mount:
+cgroup.controllers      cgroup.stat             memory.events.local  memory.peak          memory.swap.peak
+cgroup.events           cgroup.subtree_control  memory.high          memory.reclaim       memory.zswap.current
+cgroup.freeze           cgroup.threads          memory.low           memory.stat          memory.zswap.max
+cgroup.kill             cgroup.type             memory.max           memory.swap.current  pids.current
+cgroup.max.depth        cpu.stat                memory.min           memory.swap.events   pids.events
+cgroup.max.descendants  memory.current          memory.numa_stat     memory.swap.high     pids.max
+cgroup.procs            memory.events           memory.oom.group     memory.swap.max      pids.peak
+```
 
 ## 2. Do it
 
@@ -53,18 +73,44 @@ cgroup.subtree_control  dev-hugepages.mount    memory.stat       sys-kernel-trac
 
 - appelez-le `meow`
 - activez les controllers `cpu` `cpuset` et `memory` s'ils ne le sont pas déjà
-
+```console
+[jeanc@efrei-xmg4agau1 ~]$ echo "+memory" > cgroup.subtree_control
+[jeanc@efrei-xmg4agau1 ~]$ echo "+memory" | sudo tee  cgroup.subtree_control
+[jeanc@efrei-xmg4agau1 ~]$ sudo mkdir meow
+[jeanc@efrei-xmg4agau1 ~]$ cd meow/
+[jeanc@efrei-xmg4agau1 ~]$ echo "+memory" | sudo tee  cgroup.subtree_control
+```
 > Vous devez donc créer le dossier `/sys/fs/cgroup/meow/` avec un simple `mkdir`, puis interagir avec les fichiers qui s'y trouvent (le dossier a été automatiquement populé).
 
 🌞 **Créer un nouveau sous-CGroup** :
 
 - appelez-le `task1`
-- on parle de créer le dossier `/sys/fs/cgroup/meow/task1/` 
+```console
+[jeanc@efrei-xmg4agau1 ~]$ sudo mkdir task1
+[jeanc@efrei-xmg4agau1 ~]$ cd task1
+[jeanc@efrei-xmg4agau1 ~]$ cat cgroup.controllers
+[jeanc@efrei-xmg4agau1 ~]$ echo "150M" | sudo tee memory.max
+[jeanc@efrei-xmg4agau1 ~]$ echo $$  | sudo tee cgroup.procs
+[jeanc@efrei-xmg4agau1 ~]$ cat cgroup.procs
+```
+- on parle de créer le dossier `/sys/fs/cgroup/meow/task1/`
+```console
+[root@efrei-xmg4agau1 jeanc]# sudo mkdir /sys/fs/cgroup/meow/task1
+```
 - prouvez que les controllers activés sur `meow` ont bien été hérités
+```console
+[root@efrei-xmg4agau1 jeanc]# cat /sys/fs/cgroup/meow/task1/cgroup.controllers
+cpuset cpu memory
+```
 
 🌞 **Mettez en place une limitation RAM**
 
 - définissez une limite de 150M de RAM pour ce CGroup `task1`
+```console
+[jeanc@efrei-xmg4agau1 ~]$ echo "150M" | sudo tee memory.max
+[jeanc@efrei-xmg4agau1 ~]$ echo $$  | sudo tee cgroup.procs
+[jeanc@efrei-xmg4agau1 ~]$ cat cgroup.procs
+```
 
 🌞 **Prouvez que la limite est effective**
 
@@ -74,6 +120,20 @@ cgroup.subtree_control  dev-hugepages.mount    memory.stat       sys-kernel-trac
 4. utilisez de nouveau `stress-ng`
 5. constatez que le processus `stress-ng` est tué en boucle dès qu'il remplit la RAM au delà de la limite
 
+On lance d'un coté le stress : 
+```console
+[jeanc@efrei-xmg4agau1 ~]$ stress-ng --vm 1 --vm-bytes 1G
+```
+Ensuite, on va monitoré l'état de le RAM, et voir si la limitation fonctionne. Ici, la RAM se régule.
+```console
+Every 0.1s: ps -eo cmd,pid,rss | grep stress                                            efrei-xmg4agau1.etudiants.campus.villejuif: Thu Feb 27 10:48:12 2025
+
+stress-ng --vm 1 --vm-bytes    7986  4864
+stress-ng --vm 1 --vm-bytes    7988  1852
+stress-ng --vm 1 --vm-bytes    7989 151756
+grep stress                    8195  2176
+```
+
 > On rappelle que tout processus lancé par un processus existant se retrouvera par défaut dans le même *CGroup* que son parent. C'est pour ça que vous ajoutez votre shell `bash` au *CGroup* : tout ce que vous exécuterez depuis ce `bash` sera exécuté dans le même *CGroup* que lui. Ha et le truc qui tue votre processus quand il prendre trop de RAM, c'est le [**OOM-killer**](https://en.wikipedia.org/wiki/Out_of_memory).
 
 ![OOM killer](./img/oom_killer.png)
@@ -81,6 +141,9 @@ cgroup.subtree_control  dev-hugepages.mount    memory.stat       sys-kernel-trac
 🌞 **Créer un nouveau sous-*CGroup*** :
 
 - appelez-le `task2`
+```console
+mkdir /sys/fs/cgroup/meow/task2
+```
 
 🌞 **Appliquer des restrictions CPU** :
 
