@@ -21,8 +21,8 @@ Vous pouvez constater ça avec les commandes `systemd-cgls` et `systemd-cgtop` n
   - [1. Explore]
   - [2. Do it]
   - [3. systemd]
-    - [A. One-shot](#a-one-shot)
-    - [B. Real service](#b-real-service)
+    - [A. One-shot]
+    - [B. Real service]
 
 ## 1. Explore
 
@@ -233,8 +233,31 @@ Y'a une commande rigolote et parfois pratique qui permet de jouer avec tout ça.
 - n'oubliez pas d'ouvrir ce port dans le firewall pour tester
 - il faudra le lancer avec la commande `systemd-run` pour en faire un service temporaire
 - affichez le `status` du service pour prouver qu'il run
+```console
+[jeanc@efrei-xmg4agau1 task1]$ sudo systemd-run -u my_http_service --description="Python HTTP Server" python3 -m http.server 8888
+[sudo] password for jeanc:
+Running as unit: my_http_service.service
+[jeanc@efrei-xmg4agau1 task1]$ systemctl status my_http_service
+● my_http_service.service - Python HTTP Server
+     Loaded: loaded (/run/systemd/transient/my_http_service.service; transient)
+  Transient: yes
+     Active: active (running) since Thu 2025-02-27 13:12:55 CET; 3s ago
+   Main PID: 67805 (python3)
+      Tasks: 1 (limit: 23148)
+     Memory: 9.4M
+        CPU: 53ms
+     CGroup: /system.slice/my_http_service.service
+             └─67805 /bin/python3 -m http.server 8888
+
+Feb 27 13:12:55 efrei-xmg4agau1.campus.villejuif systemd[1]: Started Python HTTP Server.
+[jeanc@efrei-xmg4agau1 task1]$ sudo firewall-cmd --add-port=8888/tcp --permanent
+sudo firewall-cmd --reload
+success
+success
+```
 
 ```bash
+
 # lancer un sleep sous la forme d'un service nommé meow_test.service
 sudo systemd-run -u meow_test sleep 9999
 ```
@@ -243,7 +266,27 @@ sudo systemd-run -u meow_test sleep 9999
 
 - avec l'option `-p` de `systemd-run` vous pouvez préciser des paramètres pour le service
 - utilisez le paramètre `MemoryMax` pour mettre en place une limite à 234M
+Configuration :
+```console
+[jeanc@efrei-xmg4agau1 task1] sudo systemd-run -u meow_test -p MemoryMax=234M sleep 9999
+[jeanc@efrei-xmg4agau1 task1]$ systemctl status meow_test
+● meow_test.service - /bin/sleep 9999
+     Loaded: loaded (/run/systemd/transient/meow_test.service; transient)
+  Transient: yes
+     Active: active (running) since Thu 2025-02-27 13:19:52 CET; 4min 18s ago
+   Main PID: 68021 (sleep)
+      Tasks: 1 (limit: 23148)
+     Memory: 192.0K (max: 234.0M available: 233.8M)
+        CPU: 1ms
+     CGroup: /system.slice/meow_test.service
+             └─68021 /bin/sleep 9999
 
+Feb 27 13:19:52 efrei-xmg4agau1.campus.villejuif systemd[1]: Started /bin/sleep 9999.
+```
+```console
+[jeanc@efrei-xmg4agau1 task1]$ sudo grep -nri $(( 234 * 1024 * 1024 )) /sys/fs/cgroup/
+/sys/fs/cgroup/system.slice/meow_test.service/memory.max:1:245366784
+```
 > En vrai, `systemd-run` est un tool vraiment pratique pour limiter l'accès aux ressources d'un process qu'on lance oneshot.
 
 🌞 **Restrictions *CGroup* ?**
@@ -267,7 +310,57 @@ sudo systemd-run -u meow_test sleep 9999
   - limitation d'écriture disque : 1M
   - limitation de lecture disque : 1M
   - limitation CPU : 50% d'utilisation
+ ```console
+sudo nano /etc/systemd/system/web.service
+[Unit]
+Description=Python HTTP Server on port 9999
+After=network.target
 
+[Service]
+ExecStart=/usr/bin/python3 -m http.server 9999
+Restart=always
+User=nobody
+Group=nogroup
+WorkingDirectory=/tmp
+
+# Limitations via CGroup
+MemoryMax=321M
+IOWriteBandwidthMax=/ 1M
+IOReadBandwidthMax=/ 1M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target
+
+```
+```console
+sudo systemctl daemon-reload
+sudo systemctl enable web.service
+sudo systemctl start web.service
+systemctl status web.service
+[jeanc@efrei-xmg4agau1 task1]$ systemctl status web.service
+● web.service - Python HTTP Server on port 9999
+     Loaded: loaded (/etc/systemd/system/web.service; enabled; preset: disabled)
+     Active: active (running) since Thu 2025-02-27 13:28:07 CET; 4min 28s ago
+   Main PID: 68187 (python3)
+      Tasks: 1 (limit: 23148)
+     Memory: 9.2M (max: 321.0M available: 311.7M)
+        CPU: 74ms
+     CGroup: /system.slice/web.service
+             └─68187 /usr/bin/python3 -m http.server 9999
+
+Feb 27 13:28:07 efrei-xmg4agau1.campus.villejuif systemd[1]: Started Python HTTP Server on port 9999.
+Feb 27 13:29:04 efrei-xmg4agau1.campus.villejuif systemd[1]: [🡕] /etc/systemd/system/web.service:8: Special user nobody configured, this is not safe!
+```
 🌞 **Prouvez que ces restrictions ont été mises en place avec les *CGroups***
 
 - en explorant le dossier `/sys/` toujours !
+Vérifications : 
+```console
+[jeanc@efrei-xmg4agau1 task1]$ cat /sys/fs/cgroup/system.slice/web.service/memory.max
+336592896
+[jeanc@efrei-xmg4agau1 task1]$ cat /sys/fs/cgroup/system.slice/web.service/cpu.max
+50000 100000
+[jeanc@efrei-xmg4agau1 task1]$ cat /sys/fs/cgroup/system.slice/web.service/io.max
+8:0 rbps=1000000 wbps=1000000 riops=max wiops=max
+```
