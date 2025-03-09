@@ -126,5 +126,38 @@ jeanc@srv-ubuntu:/home$ sudo strace -c /usr/sbin/nginx -g 'daemon off;'
 - modifier le fichier `nginx.service` pour inclure un filtrage des *syscalls*
 - principe du moindre privilège : vous n'autorisez que le strict nécessaire
 - vous me remettez le fichier `nginx.service` modifié dans le compte-rendu naturellement !
-- 
-(./sources/nginx.service)
+
+Voici le fichier du service NGINX modifié, je me suis aidé de : https://linux-audit.com/systemd/systemd-syscall-filtering/
+```console
+[Unit]
+Description=The nginx HTTP and reverse proxy server
+After=network-online.target remote-fs.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+PIDFile=/run/nginx.pid
+# Nginx will fail to start if /run/nginx.pid already exists but has the wrong
+# SELinux context. This might happen when running `nginx -t` from the cmdline.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1268621
+ExecStartPre=/usr/bin/rm -f /run/nginx.pid
+ExecStartPre=/usr/sbin/nginx -t
+ExecStart=/usr/sbin/nginx
+ExecReload=/usr/sbin/nginx -s reload
+KillSignal=SIGQUIT
+TimeoutStopSec=5
+KillMode=mixed
+PrivateTmp=true
+
+# Filtrage des syscalls avec seccomp :
+# Seuls les appels systèmes listés sont autorisés.
+# (La liste proposée est indicative. Ajustez-la selon vos observations avec strace/sysdig.)
+
+#SystemCallFilter=read write open openat close access stat fstat newfstatat lstat pread64 pwrite64 readlink lseek mmap mprotect munmap brk rt_sigaction rt_sigprocmask rt_sigreturn ioctl poll sysinfo clock_gettim>
+SystemCallFilter=@system-service @network-io @file-system
+
+[Install]
+WantedBy=multi-user.target
+
+```
+
