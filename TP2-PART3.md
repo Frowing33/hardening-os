@@ -129,7 +129,7 @@ jeanc@srv-ubuntu:/home$ sudo strace -c /usr/sbin/nginx -g 'daemon off;'
 
 Voici le fichier du service NGINX modifié, je me suis aidé de : https://linux-audit.com/systemd/systemd-syscall-filtering/
 ```console
-[Unit]
+Unit]
 Description=The nginx HTTP and reverse proxy server
 After=network-online.target remote-fs.target nss-lookup.target
 Wants=network-online.target
@@ -153,11 +153,13 @@ PrivateTmp=true
 # Seuls les appels systèmes listés sont autorisés.
 # (La liste proposée est indicative. Ajustez-la selon vos observations avec strace/sysdig.)
 
-#SystemCallFilter=read write open openat close access stat fstat newfstatat lstat pread64 pwrite64 readlink lseek mmap mprotect munmap brk rt_sigaction rt_sigprocmask rt_sigreturn ioctl poll sysinfo clock_gettim>
-SystemCallFilter=@system-service @network-io @file-system
+SystemCallFilter=accept4 access arch_prctl bind brk clone close connect dup2 epoll_create epoll_create1 epoll_ctl epoll_wait eventfd2 execve exit_group fcntl fstat futex getdents64 geteuid getpid getppid getrandom ioctl io_setup listen lseek mkdir mmap mprotect munmap newfstatat openat prctl pread prlimit procexit pwrite read recvfrom recvmsg rseq rt_sigaction rt_sigprocmask rt_sigreturn rt_sigsuspend sendfile sendmsg sendto setgid setgroups set_robust_list setsid setsockopt set_tid_address setuid signaldeliver socket socketpair statfs switch sysinfo timerfd_create timerfd_settime umask uname unlink wait4 write writev pread64 unlinkat pwrite64
+
+#SystemCallFilter=@system-service @network-io @file-system
 
 [Install]
 WantedBy=multi-user.target
+
 
 ```
 
